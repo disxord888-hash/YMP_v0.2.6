@@ -113,68 +113,8 @@ let audioCtx = null;
 const MAX_QUEUE = 32767;
 
 // Tier theme colors mapping
-const TIER_THEMES = {
-    '1000': { primary: '#ff00ff', light: '#ffccff', accent: '#880088', contrast: '#fff' }, // 1000: Rainbow/Magenta
-    '600': { primary: '#990000', light: '#cc0000', accent: '#660000', contrast: '#fff' }, // 600: 濃紅
-    '500': { primary: '#ff0000', light: '#ff4d4d', accent: '#cc0000', contrast: '#fff' }, // 500: 赤
-    '400': { primary: '#ffa500', light: '#ffc04d', accent: '#cc8400', contrast: '#fff' }, // 400: オレンジ
-    '300': { primary: '#fbbf24', light: '#fef3c7', accent: '#92400e', contrast: '#000' }, // 300: 黄色
-    '200': { primary: '#9ad82e', light: '#bef264', accent: '#65a30d', contrast: '#000' }, // 200: 黄緑
-    '100': { primary: '#3b82f6', light: '#93c5fd', accent: '#1d4ed8', contrast: '#fff' }, // 100: 青
-    '50': { primary: '#8b5cf6', light: '#a78bfa', accent: '#f43f5e', contrast: '#fff' },  // 50: 紫
-    '-100': { primary: '#475569', light: '#94a3b8', accent: '#1e293b', contrast: '#fff' }, // -100: 灰
-    '0': { primary: '#333333', light: '#555555', accent: '#222222', contrast: '#fff' },    // 0: 暗灰
-    '-999': { primary: '#000000', light: '#333333', accent: '#000000', contrast: '#fff' }, // -999: 黒
-};
-
-function getThemeKeyForTier(tierNum) {
-    if (tierNum >= 1000) return '1000';
-    if (tierNum >= 600) return '600';
-    if (tierNum >= 500) return '500';
-    if (tierNum >= 400) return '400';
-    if (tierNum >= 300) return '300';
-    if (tierNum >= 200) return '200';
-    if (tierNum >= 100) return '100';
-    if (tierNum > 0) return '50';
-    if (tierNum === 0) return '0';
-    if (tierNum > -100) return '0';
-    if (tierNum > -900) return '-100';
-    return '-999';
-}
-
 function applyTierTheme(tier) {
-    const tierNum = parseInt(tier) || 0;
-    const themeKey = getThemeKeyForTier(tierNum);
-    const theme = TIER_THEMES[themeKey] || TIER_THEMES['0'];
-    const root = document.documentElement;
-    root.style.setProperty('--primary', theme.primary);
-    root.style.setProperty('--primary-light', theme.light);
-    root.style.setProperty('--accent', theme.accent);
-    root.style.setProperty('--on-primary', theme.contrast);
-
-    // Choose active background opacity and text color based on contrast
-    const isActiveLight = theme.contrast === '#000';
-    const activeAlpha = isActiveLight ? 0.8 : 0.25;
-    const activeText = isActiveLight ? '#000' : 'var(--text-main)';
-    root.style.setProperty('--on-active-text', activeText);
-
-    // Convert hex to rgba for active background
-    const hexToRgba = (hex, alpha) => {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    };
-    root.style.setProperty('--active-bg', hexToRgba(theme.primary, activeAlpha));
-
-    // Also update progress bar directly for immediate effect
-    const progressBar = document.getElementById('progress-bar');
-    if (progressBar) {
-        progressBar.style.background = theme.primary;
-        progressBar.style.boxShadow = `0 0 15px ${theme.primary}`;
-    }
-
-    console.log('Theme applied:', tier, theme);
+    // ユーザー要望によりtierごとの色変更を廃止
 }
 
 function getTierRank(tier) {
@@ -455,7 +395,7 @@ function parseTimeToSeconds(str) {
 // --- Utilities ---
 function shortenUrl(u) {
     const id = extractId(u);
-    return id ? `https://www.youtube.com/watch?v=${id}` : u;
+    return id ? id : u;
 }
 
 function extractId(u) {
@@ -2006,10 +1946,18 @@ function openShareLinkModal() {
 
 document.getElementById('btn-share-link').onclick = openShareLinkModal;
 
-document.getElementById('share-github-btn').onclick = () => {
+document.getElementById('share-github-btn').onclick = async () => {
     if (!currentShareData) return;
-    const url = `https://disxord888-hash.github.io/yukic_player/?=${currentShareData}`;
-    document.getElementById('share-link-output').value = url;
+    try {
+        const res = await fetch('version.json');
+        const data = await res.json();
+        const url = `https://disxord888-hash.github.io/YMP_${data.version}/?=${currentShareData}`;
+        document.getElementById('share-link-output').value = url;
+    } catch (e) {
+        console.error("Failed to fetch version.json", e);
+        const url = `https://disxord888-hash.github.io/YMP_v0.2.1/?=${currentShareData}`;
+        document.getElementById('share-link-output').value = url;
+    }
 };
 
 document.getElementById('share-local-btn').onclick = () => {
