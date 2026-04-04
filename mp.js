@@ -33,8 +33,6 @@ let lastVolumeBeforeMute = 100;
 let tPrefixCount = 0;
 let yPrefixCount = 0;
 let isSlashKeyPrefixActive = false;
-let isBackslashPressed = false; // \ (\) state for offset seek
-let isSlashPressed = false; // / state for offset seek
 let imageStartTime = 0; // For seeking in images/GIFs
 let heldKeysMap = new Map(); // For keyboard monitor
 let isShortcutDisplayEnabled = false;
@@ -199,27 +197,40 @@ let audioCtx = null;
 
 const MAX_QUEUE = 32767;
 
-// Tier ranking order (higher index = better tier)
-const TIER_ORDER = ['Fail', '-', '×', '△', '＊', '＊＊', '＊＊＊', '＊＊＊＊', '＊＊＊＊＊', '＊＊＊＊＊＊', '💯'];
-
-// Tier theme colors
+// Tier theme colors mapping
 const TIER_THEMES = {
-    '💯': { primary: '#ff00ff', light: '#ffccff', accent: '#880088', contrast: '#fff' }, // 100: Rainbow/Magenta
-    '＊＊＊＊＊＊': { primary: '#990000', light: '#cc0000', accent: '#660000', contrast: '#fff' }, // 6: 濃紅
-    '＊＊＊＊＊': { primary: '#ff0000', light: '#ff4d4d', accent: '#cc0000', contrast: '#fff' }, // 5: 赤
-    '＊＊＊＊': { primary: '#ffa500', light: '#ffc04d', accent: '#cc8400', contrast: '#fff' }, // 4: オレンジ
-    '＊＊＊': { primary: '#fbbf24', light: '#fef3c7', accent: '#92400e', contrast: '#000' }, // 3: 黄色
-    '＊＊': { primary: '#9ad82e', light: '#bef264', accent: '#65a30d', contrast: '#000' }, // 2: 黄緑
-    '＊': { primary: '#3b82f6', light: '#93c5fd', accent: '#1d4ed8', contrast: '#fff' }, // 1: 青
-    '△': { primary: '#8b5cf6', light: '#a78bfa', accent: '#f43f5e', contrast: '#fff' },
-    '×': { primary: '#475569', light: '#94a3b8', accent: '#1e293b', contrast: '#fff' },
-    '-': { primary: '#333333', light: '#555555', accent: '#222222', contrast: '#fff' },
-    'Fail': { primary: '#000000', light: '#333333', accent: '#000000', contrast: '#fff' },
-    '': { primary: '#475569', light: '#94a3b8', accent: '#1e293b', contrast: '#fff' }
+    '1000': { primary: '#ff00ff', light: '#ffccff', accent: '#880088', contrast: '#fff' }, // 1000: Rainbow/Magenta
+    '600': { primary: '#990000', light: '#cc0000', accent: '#660000', contrast: '#fff' }, // 600: 濃紅
+    '500': { primary: '#ff0000', light: '#ff4d4d', accent: '#cc0000', contrast: '#fff' }, // 500: 赤
+    '400': { primary: '#ffa500', light: '#ffc04d', accent: '#cc8400', contrast: '#fff' }, // 400: オレンジ
+    '300': { primary: '#fbbf24', light: '#fef3c7', accent: '#92400e', contrast: '#000' }, // 300: 黄色
+    '200': { primary: '#9ad82e', light: '#bef264', accent: '#65a30d', contrast: '#000' }, // 200: 黄緑
+    '100': { primary: '#3b82f6', light: '#93c5fd', accent: '#1d4ed8', contrast: '#fff' }, // 100: 青
+    '50': { primary: '#8b5cf6', light: '#a78bfa', accent: '#f43f5e', contrast: '#fff' },  // 50: 紫
+    '-100': { primary: '#475569', light: '#94a3b8', accent: '#1e293b', contrast: '#fff' }, // -100: 灰
+    '0': { primary: '#333333', light: '#555555', accent: '#222222', contrast: '#fff' },    // 0: 暗灰
+    '-999': { primary: '#000000', light: '#333333', accent: '#000000', contrast: '#fff' }, // -999: 黒
 };
 
+function getThemeKeyForTier(tierNum) {
+    if (tierNum >= 1000) return '1000';
+    if (tierNum >= 600) return '600';
+    if (tierNum >= 500) return '500';
+    if (tierNum >= 400) return '400';
+    if (tierNum >= 300) return '300';
+    if (tierNum >= 200) return '200';
+    if (tierNum >= 100) return '100';
+    if (tierNum > 0) return '50';
+    if (tierNum === 0) return '0';
+    if (tierNum > -100) return '0';
+    if (tierNum > -900) return '-100';
+    return '-999';
+}
+
 function applyTierTheme(tier) {
-    const theme = TIER_THEMES[tier] || TIER_THEMES[''];
+    const tierNum = parseInt(tier) || 0;
+    const themeKey = getThemeKeyForTier(tierNum);
+    const theme = TIER_THEMES[themeKey] || TIER_THEMES['0'];
     const root = document.documentElement;
     root.style.setProperty('--primary', theme.primary);
     root.style.setProperty('--primary-light', theme.light);
@@ -252,9 +263,7 @@ function applyTierTheme(tier) {
 }
 
 function getTierRank(tier) {
-    if (!tier) return -1; // No tier = lowest priority
-    const idx = TIER_ORDER.indexOf(tier);
-    return idx >= 0 ? idx : -1;
+    return parseInt(tier) || 0;
 }
 
 // DOM Elements
@@ -270,6 +279,8 @@ const el = {
     addAuthor: document.getElementById('add-author'),
     addMemo: document.getElementById('add-memo'),
     addTier: document.getElementById('add-tier'),
+    addTierDisplay: document.getElementById('add-tier-display'),
+    nowTierDisplay: document.getElementById('now-tier-display'),
     sortMode: document.getElementById('sort-mode'),
     fileInput: document.getElementById('file-input'),
     lockOverlay: document.getElementById('lock-overlay'),
@@ -483,8 +494,9 @@ function syncCurrentInfo() {
             el.nowId.value = displayUrl;
         }
 
-        if (el.nowTier && el.nowTier.value !== (item.tier || "")) {
-            el.nowTier.value = item.tier || "";
+        if (el.nowTier && el.nowTier.value !== String(item.tier || "0")) {
+            el.nowTier.value = item.tier || "0";
+            if (el.nowTierDisplay) el.nowTierDisplay.textContent = getTierShortText(item.tier || "-");
         }
     }
 }
@@ -850,7 +862,10 @@ async function addToQueue(uOrId, tIn, aIn, memoIn, tierIn) {
                 if (el.addTitle) el.addTitle.value = "";
                 if (el.addAuthor) el.addAuthor.value = "";
                 if (el.addMemo) el.addMemo.value = "";
-                if (el.addTier) el.addTier.value = "";
+                if (el.addTier) {
+                    el.addTier.value = "0";
+                    if (el.addTierDisplay) el.addTierDisplay.textContent = "-";
+                }
 
                 addToQueue(selected.id, selected.title, selected.author, memoIn, tierIn);
             });
@@ -1024,35 +1039,10 @@ function checkTouchDevice() {
 checkTouchDevice();
 window.addEventListener('resize', checkTouchDevice);
 
-function getTierBadgeHTML(tier) {
-    if (!tier) return '';
-    const tierClass = getTierColorClass(tier);
-    return `<span class="tier-badge ${tierClass}">${tier}</span>`;
-}
-
 function getTierShortText(tier) {
-    if (!tier || tier === '-') return "";
-    if (tier === '💯') return '💯';
-    if (tier.includes('＊')) {
-        const count = (tier.match(/＊/g) || []).length;
-        return count > 1 ? `＊x${count}` : '＊';
-    }
-    return tier;
-}
-
-function getTierColorClass(tier) {
-    if (!tier || tier === '×') return 'tier-x';
-    if (tier === '💯') return 'tier-100';
-    if (tier === '＊＊＊＊＊＊') return 'tier-6';
-    if (tier === '＊＊＊＊＊') return 'tier-5';
-    if (tier === '＊＊＊＊') return 'tier-4';
-    if (tier === '＊＊＊') return 'tier-3';
-    if (tier === '＊＊') return 'tier-2';
-    if (tier === '＊') return 'tier-1';
-    if (tier === '△') return 'tier-0';
-    if (tier === '-') return 'tier-minus';
-    if (tier === 'Fail') return 'tier-fail';
-    return '';
+    const num = parseInt(tier);
+    if (isNaN(num) || num === 0) return "";
+    return `T${num}`;
 }
 
 
@@ -1084,7 +1074,7 @@ function renderQueue() {
             <div class="q-info">
                 <div class="q-title-row">
                     <span class="q-title">
-                        ${item.tier && item.tier !== '-' ? `<span class="q-tier-label">${getTierShortText(item.tier)}</span> ` : ''}${safe(item.title)}
+                        ${item.tier && item.tier !== '-' && item.tier != 0 && item.tier !== '0' ? `<span class="q-tier-label">${getTierShortText(item.tier)}</span> ` : ''}${safe(item.title)}
                     </span>
                 </div>
                 <span class="q-author">${safe(item.author)}</span>
@@ -1117,7 +1107,7 @@ function renderQueue() {
                 selectedListIndex = i; // Keep this for editor context
 
                 // Show info in editor for the clicked item
-                const displayTitle = (item.tier && item.tier !== '-') ? `[${item.tier}] ${item.title}` : item.title;
+                const displayTitle = (item.tier && item.tier !== '-' && item.tier != 0 && item.tier !== '0') ? `[${getTierShortText(item.tier)}] ${item.title}` : item.title;
                 el.nowTitle.value = displayTitle;
                 el.nowAuthor.value = item.author;
                 if (el.nowMemo) el.nowMemo.value = item.memo || "";
@@ -1793,7 +1783,10 @@ document.getElementById('btn-add').onclick = async () => {
     // Only clear if it was a direct add (not a search start)
     if (res !== "SEARCH_MODAL_OPENED" && res !== "SEARCH_FAILED") {
         el.addUrl.value = el.addTitle.value = el.addAuthor.value = el.addMemo.value = '';
-        if (el.addTier) el.addTier.value = '';
+        if (el.addTier) {
+            el.addTier.value = '0';
+            if (el.addTierDisplay) el.addTierDisplay.textContent = "-";
+        }
     }
 };
 
@@ -1806,6 +1799,34 @@ if (el.sortMode) {
         // 'manual' doesn't need action - user can drag to reorder
     };
 }
+
+// Tier Cycle Handlers
+function cycleTier(current, dir) {
+    let num = parseInt(current);
+    if (isNaN(num)) num = 0;
+    num += dir;
+    return Math.max(-999, Math.min(1000, num));
+}
+
+document.getElementById('btn-now-tier-down')?.addEventListener('click', () => {
+    el.nowTier.value = cycleTier(el.nowTier.value, -1);
+    if (el.nowTier.onchange) el.nowTier.onchange(); // trigger logic
+    else el.nowTier.dispatchEvent(new Event('change'));
+});
+document.getElementById('btn-now-tier-up')?.addEventListener('click', () => {
+    el.nowTier.value = cycleTier(el.nowTier.value, 1);
+    if (el.nowTier.onchange) el.nowTier.onchange(); // trigger logic
+    else el.nowTier.dispatchEvent(new Event('change'));
+});
+
+document.getElementById('btn-add-tier-down')?.addEventListener('click', () => {
+    el.addTier.value = cycleTier(el.addTier.value, -1);
+    el.addTier.dispatchEvent(new Event('change'));
+});
+document.getElementById('btn-add-tier-up')?.addEventListener('click', () => {
+    el.addTier.value = cycleTier(el.addTier.value, 1);
+    el.addTier.dispatchEvent(new Event('change'));
+});
 // Screenshot Share Modal Logic
 /**
  * Applies a blurred version of an image URL to a target element's background.
@@ -2296,7 +2317,7 @@ el.nowTitle.oninput = () => {
         const target = document.querySelector(`.queue-item[data-idx="${idx}"] .q-title`);
         if (target) {
             // Re-render only the title part or just text if shorthand isn't used
-            const labelHtml = (queue[idx].tier && queue[idx].tier !== '-') ? `<span class="q-tier-label">${getTierShortText(queue[idx].tier)}</span> ` : '';
+            const labelHtml = (queue[idx].tier && queue[idx].tier != 0 && queue[idx].tier !== '0' && queue[idx].tier !== '-') ? `<span class="q-tier-label">${getTierShortText(queue[idx].tier)}</span> ` : '';
             target.innerHTML = `${labelHtml}${safe(el.nowTitle.value)}`;
         }
     }
@@ -2380,43 +2401,39 @@ el.progressContainer.onclick = (e) => {
 
 // IO
 // Tier形式変換関数
-// Tier形式変換関数
 function convertOldTierToNew(tier) {
-    if (!tier) return '×';
-    let sTier = String(tier);
+    if (tier === null || tier === undefined || tier === '') return 0;
+    
+    // Check if it's already a number or numeric string
+    const num = parseInt(tier);
+    if (!isNaN(num) && String(num) === String(tier).trim()) {
+        return Math.max(-999, Math.min(1000, num));
+    }
 
-    // Replace ★ with ＊
+    let sTier = String(tier).trim();
     sTier = sTier.replace(/★/g, '＊');
 
-    // Check if new format (e.g. ＊, ＊＊, ..., 💯)
-    if (TIER_ORDER.includes(sTier)) return sTier;
-
-    // Map old tiers and unmapped star counts
+    if (sTier === '💯') return 1000;
+    if (sTier === 'Fail') return -999;
+    if (sTier === '-') return 0;
+    if (sTier === '×') return -100;
+    if (sTier === '△') return 100;
+    
+    const stars = sTier.match(/＊/g);
+    if (stars) {
+        return Math.min(1000, stars.length * 100 + 100);
+    }
+    
     const tierMap = {
-        'SSSSS': '＊＊＊＊＊',
-        'SSSS': '＊＊＊＊',
-        'SSS': '＊＊＊',
-        'SS': '＊＊',
-        'S+': '＊',
-        'S': '＊',
-        'S-': '＊',
-        'A+': '△',
-        'A': '△',
-        'A-': '△',
-        'B+': '△',
-        'B': '△',
-        'B-': '△',
-        'C+': '×',
-        'C': '×',
-        'C-': '×',
-        'D+': '×',
-        'D': '×',
-        'D-': '×',
-        'F': 'Fail',
-        'F-': 'Fail',
-        'F--': '💯'
+        'SSSSS': 600, 'SSSS': 500, 'SSS': 400, 'SS': 300,
+        'S+': 250, 'S': 200, 'S-': 150,
+        'A+': 120, 'A': 100, 'A-': 80,
+        'B+': 50, 'B': 0, 'B-': -10,
+        'C+': -50, 'C': -100, 'C-': -150,
+        'D+': -200, 'D': -300, 'D-': -400,
+        'F': -900, 'F-': -950, 'F--': 1000
     };
-    return tierMap[sTier] !== undefined ? tierMap[sTier] : '×';
+    return tierMap[sTier] !== undefined ? tierMap[sTier] : 0;
 }
 
 function processImportFile(f) {
@@ -3305,40 +3322,6 @@ function handleShortcutKey(rawK, e = null) {
         if (k !== 'y') yPrefixCount = 0;
     }
 
-    // Shift + Number keys for Percent Seek (Offset +1/24)
-    if (e && e.shiftKey && currentIndex >= 0) {
-        let scPct = -1;
-        // Use e.code to handle Shift+Key correctly
-        // Mapping 1-9, 0, -, ^ to 12 divisions (0-11)
-        switch (e.code) {
-            case 'Digit1': scPct = 0; break;
-            case 'Digit2': scPct = 1; break;
-            case 'Digit3': scPct = 2; break;
-            case 'Digit4': scPct = 3; break;
-            case 'Digit5': scPct = 4; break;
-            case 'Digit6': scPct = 5; break;
-            case 'Digit7': scPct = 6; break;
-            case 'Digit8': scPct = 7; break;
-            case 'Digit9': scPct = 8; break;
-            case 'Digit0': scPct = 9; break;
-            case 'Minus': scPct = 10; break;
-            case 'Equal': scPct = 11; break; // ^ on JIS
-            // \ (IntlRo/Backslash) is used as modifier not trigger
-        }
-
-        if (scPct !== -1) {
-            e.preventDefault();
-            let offset = 0;
-            if (isSlashPressed) offset = 1;
-            else if (isBackslashPressed) offset = 2;
-
-            mediaSeekToPercent((scPct * 3 + offset) / 36);
-            return;
-        }
-    }
-
-
-
     // Logic keys (always active)
     if (kl === 'z') playIndex(0);
     else if (kl === 'v') playIndex(queue.length - 1);
@@ -3367,15 +3350,8 @@ function handleShortcutKey(rawK, e = null) {
     }
 }
 
-// Track \ and / key state
-document.addEventListener('keydown', (e) => {
-    if (e.code === 'IntlRo' || e.code === 'Backslash') isBackslashPressed = true;
-    if (e.code === 'Slash') isSlashPressed = true;
-});
 document.addEventListener('keyup', (e) => {
     updateKeyMonitor(e, 'up');
-    if (e.code === 'IntlRo' || e.code === 'Backslash') isBackslashPressed = false;
-    if (e.code === 'Slash') isSlashPressed = false;
 });
 
 function getTLabelForMemo(memo, timeStr) {
@@ -4281,45 +4257,15 @@ function initProgressMarkers() {
         marker.appendChild(markerDot);
 
         if (!isTouchDevice) {
-            const n = Math.floor(i / 3);
-            const mod = i % 3;
-            const keyChar = keys[n] || '?';
-            let labelText = `↑${keyChar}`;
-            if (mod === 1) labelText = `↑/${keyChar}`;
-            else if (mod === 2) {
-                labelText = (keyChar === '\\' || keyChar === '¥') ? `\\` : `↑\\${keyChar}`;
-            }
-            if (i === 36 && (keyChar === '\\' || keyChar === '¥')) {
-                labelText = `\\`;
-            }
-
-            const label = document.createElement('div');
-            Object.assign(label.style, {
-                position: 'absolute',
-                top: '8px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                fontSize: '9pt',
-                color: '#aaa',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none'
-            });
-            label.innerText = labelText;
-            marker.appendChild(label);
-
             marker.onmouseover = () => {
                 marker.style.background = 'var(--primary, #f00)';
                 markerDot.style.background = 'var(--primary, #f00)';
                 marker.style.height = '14px';
-                label.style.color = '#fff';
-                label.style.fontWeight = 'bold';
             };
             marker.onmouseout = () => {
                 marker.style.background = 'var(--text-muted, #aaa)';
                 markerDot.style.background = 'var(--text-muted, #aaa)';
                 marker.style.height = '10px';
-                label.style.color = '#aaa';
-                label.style.fontWeight = 'normal';
             };
         }
 
@@ -4618,7 +4564,10 @@ if (el.nowTitle) {
                 queue[currentIndex].title = match[2];
                 if (match[1] !== queue[currentIndex].tier) {
                     queue[currentIndex].tier = match[1];
-                    if (el.nowTier) el.nowTier.value = match[1];
+                    if (el.nowTier) {
+                        el.nowTier.value = match[1];
+                        if (el.nowTierDisplay) el.nowTierDisplay.textContent = getTierShortText(match[1]);
+                    }
                     applyTierTheme(match[1]);
                 }
             } else {

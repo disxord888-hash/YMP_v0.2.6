@@ -321,20 +321,11 @@
                         <span id="current-time">0:00</span> / <span id="duration">0:00</span>
                     </div>
                     <div class="title-row-main">
-                        <select id="now-tier" class="info-input tier-select-main">
-                            <option value="">Tier</option>
-                            <option value="💯">💯</option>
-                            <option value="＊＊＊＊＊＊">＊＊＊＊＊＊</option>
-                            <option value="＊＊＊＊＊">＊＊＊＊＊</option>
-                            <option value="＊＊＊＊">＊＊＊＊</option>
-                            <option value="＊＊＊">＊＊＊</option>
-                            <option value="＊＊">＊＊</option>
-                            <option value="＊">＊</option>
-                            <option value="△">△</option>
-                            <option value="×">×</option>
-                            <option value="-">-</option>
-                            <option value="Fail">Fail</option>
-                        </select>
+                        <div class="tier-control" style="display:flex; align-items:center; gap:2px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:4px; padding:2px;">
+                            <button id="btn-now-tier-down" class="btn small-btn" style="padding:0.2rem 0.4rem; border:none; background:transparent;" title="Tier Down">⇩</button>
+                            <input type="number" id="now-tier" class="info-input" value="0" min="-999" max="1000" style="width:50px; text-align:center; font-weight:bold; font-size:0.9rem; padding:0; height:24px; -moz-appearance:textfield; appearance:textfield;">
+                            <button id="btn-now-tier-up" class="btn small-btn" style="padding:0.2rem 0.4rem; border:none; background:transparent;" title="Tier Up">⇧</button>
+                        </div>
                         <input type="text" id="now-title" class="info-input title" placeholder="Song Title">
                     </div>
                     <input type="text" id="now-author" class="info-input" placeholder="Artist">
@@ -424,9 +415,6 @@
                 <h3
                     style="margin:0 0 0.5rem 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                     Add Song
-                    <button id="btn-recommend-vocaloid" class="btn small-btn"
-                        style="font-size: 0.75rem; border-color: #00ffd5; background: linear-gradient(135deg, #008080, #00aaaa) !important; color: #fff;">💙
-                        Vocaloid</button>
                 </h3>
                 <div class="input-row">
                     <div style="flex:1; display:flex; flex-direction:column; gap:0.5rem;">
@@ -438,20 +426,11 @@
                                 style="flex: 1; min-width: 100px;">
                             <textarea id="add-memo" class="app-input add-input-large" placeholder="Memo" rows="1"
                                 style="flex: 1; min-width: 100px; resize: vertical; min-height: 2em; box-sizing: border-box;"></textarea>
-                            <select id="add-tier" class="app-input tier-select">
-                                <option value="">Tier</option>
-                                <option value="💯">💯</option>
-                                <option value="＊＊＊＊＊＊">＊＊＊＊＊＊</option>
-                                <option value="＊＊＊＊＊">＊＊＊＊＊</option>
-                                <option value="＊＊＊＊">＊＊＊＊</option>
-                                <option value="＊＊＊">＊＊＊</option>
-                                <option value="＊＊">＊＊</option>
-                                <option value="＊">＊</option>
-                                <option value="△">△</option>
-                                <option value="×">×</option>
-                                <option value="-">-</option>
-                                <option value="Fail">Fail</option>
-                            </select>
+                            <div class="tier-control" style="display:flex; align-items:center; gap:2px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:4px; padding:2px;">
+                                <button id="btn-add-tier-down" class="btn small-btn" style="padding:0.2rem 0.4rem; border:none; background:transparent;" title="Tier Down">⇩</button>
+                                <input type="number" id="add-tier" class="app-input" value="0" min="-999" max="1000" style="width:50px; text-align:center; font-weight:bold; font-size:0.9rem; padding:0; height:24px; -moz-appearance:textfield; appearance:textfield;">
+                                <button id="btn-add-tier-up" class="btn small-btn" style="padding:0.2rem 0.4rem; border:none; background:transparent;" title="Tier Up">⇧</button>
+                            </div>
                         </div>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:0.5rem;">
