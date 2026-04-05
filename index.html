@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YMP v0.2.4 - Yukic Music Player</title>
+    <title>YMP v0.2.5 - Yukic Music Player</title>
     <meta name="description"
         content="YouTube, SoundCloud, Vimeo に対応した高機能なウェブベースのミュージックプレイヤー。詳細なシーク操作やキュー管理、アラーム機能を搭載しています。">
     <meta name="theme-color" content="#3b82f6">
@@ -50,6 +50,10 @@
                 style="color: #3b82f6; border-color: #3b82f6;">🔗</button>
             <button id="btn-screenshot" class="help-btn" title="Take Screenshot"
                 style="color: #4ade80; border-color: #4ade80;">📸</button>
+            <button id="btn-theme" class="help-btn" title="Theme Settings"
+                style="color: #f472b6; border-color: #f472b6;">🎨</button>
+            <button id="btn-sleep-timer-open" class="help-btn" title="Sleep Timer"
+                style="color: #6366f1; border-color: #6366f1;">😴</button>
             <button id="btn-install" class="help-btn" title="Install App"
                 style="display: none; color: #facc15; border-color: #facc15;">📥</button>
             <button id="help-btn" class="help-btn" title="Shortcuts">▼</button>
@@ -75,7 +79,8 @@
         <div class="help-content">
             <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
                 <h2 id="help-modal-title" style="margin: 0 0 0.5rem 0; color: var(--primary-light);">YMP</h2>
-                <p id="help-modal-url" style="font-size: 0.85rem; color: var(--text-muted); margin: 0; word-break: break-all;">
+                <p id="help-modal-url"
+                    style="font-size: 0.85rem; color: var(--text-muted); margin: 0; word-break: break-all;">
                 </p>
                 <div style="font-size: 0.8rem; color: var(--primary); margin-top: 0.5rem; font-weight: bold;">
                     💻 Chromeのメニューから「保存して共有」→「インストール」でデスクトップアプリとして利用できます。
@@ -188,14 +193,17 @@
                     <button class="btn sleep-preset-btn" data-minutes="120">120分</button>
                 </div>
                 <div>
-                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">カスタム (分)</label>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">カスタム
+                        (分)</label>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="number" id="sleep-timer-input" class="app-input" placeholder="分" min="1" max="1440" style="width: 100px; font-size: 1.2rem; text-align:center;">
+                        <input type="number" id="sleep-timer-input" class="app-input" placeholder="分" min="1" max="1440"
+                            style="width: 100px; font-size: 1.2rem; text-align:center;">
                         <span style="font-size:0.9rem; color:var(--text-muted);">分</span>
                     </div>
                 </div>
 
-                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
                     <span style="font-size:0.9rem;">Status:</span>
                     <span id="sleep-timer-status" style="font-weight:bold; color:var(--text-muted);">OFF</span>
                 </div>
@@ -270,6 +278,34 @@
         </div>
     </div>
 
+    <!-- Theme Settings Modal -->
+    <div id="theme-modal" class="help-modal">
+        <div class="help-content" style="max-width: 500px;">
+            <h3 style="margin-top:0;">🎨 テーマ設定</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">各色をhex RGBで指定できます。</p>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1.5rem;">
+                <button class="btn theme-preset-btn" data-preset="default">Default</button>
+                <button class="btn theme-preset-btn" data-preset="midnight">Midnight</button>
+                <button class="btn theme-preset-btn" data-preset="sakura">Sakura</button>
+                <button class="btn theme-preset-btn" data-preset="forest">Forest</button>
+                <button class="btn theme-preset-btn" data-preset="ocean">Ocean</button>
+                <button class="btn theme-preset-btn" data-preset="sunset">Sunset</button>
+            </div>
+
+            <div id="theme-inputs" class="theme-inputs-grid">
+                <!-- JS will populate -->
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:1.5rem;">
+                <button id="btn-theme-reset" class="btn red-btn">リセット</button>
+                <button id="btn-theme-apply" class="btn primary-btn">適用</button>
+            </div>
+            <button onclick="document.getElementById('theme-modal').classList.remove('active')" class="btn"
+                style="margin-top: 10px; width: 100%;">閉じる</button>
+        </div>
+    </div>
+
     <!-- Screenshot Share Modal -->
     <div id="share-screenshot-modal" class="help-modal">
         <div class="help-content"
@@ -290,7 +326,10 @@
                         <div id="share-author" class="share-author">Artist Name</div>
                     </div>
                     <div class="share-footer">
-                        <span class="share-brand">yukic music</span>
+                        <div class="share-brand-block">
+                            <span id="share-brand-title" class="share-brand">YMP</span>
+                            <span id="share-brand-url" class="share-brand-url"></span>
+                        </div>
                         <div class="share-code">
                             <div class="sc-bar"></div>
                             <div class="sc-bar"></div>
@@ -506,7 +545,7 @@
     <div class="footer-info">
         <div class="footer-brand">Yukic Music Player</div>
         <div class="footer-logo">YMP</div>
-        <div class="footer-version">v0.2.4</div>
+        <div class="footer-version">v0.2.5</div>
     </div>
 
     <!-- Modal for File Import -->

@@ -10,14 +10,30 @@ try {
     });
 } catch (e) { }
 
-// Fetch version and update help modal header
+// Fetch version and update all brandings
+let currentVersion = 'v0.2.5';
 fetch('version.json').then(r => r.json()).then(data => {
-    const v = data.version || 'v0.0.0';
+    const v = data.version || 'v0.2.5';
+    currentVersion = v;
+
+    // Help Modal
     const titleEl = document.getElementById('help-modal-title');
     const urlEl = document.getElementById('help-modal-url');
     if (titleEl) titleEl.textContent = `YMP - ${v}`;
     if (urlEl) urlEl.textContent = `disxord888-hash.github.io/YMP_${v}/`;
-}).catch(() => {});
+
+    // Screenshot Card
+    const sBrandTitle = document.getElementById('share-brand-title');
+    const sBrandUrl = document.getElementById('share-brand-url');
+    if (sBrandTitle) sBrandTitle.textContent = `YMP - ${v}`;
+    if (sBrandUrl) sBrandUrl.textContent = `disxord888-hash.github.io/YMP_${v}/`;
+
+    // Footer
+    const footerVer = document.querySelector('.footer-version');
+    if (footerVer) footerVer.textContent = v;
+
+    document.title = `YMP ${v} - Yukic Music Player`;
+}).catch(() => { });
 
 // State
 let queue = [];
@@ -1318,7 +1334,7 @@ function playIndex(i) {
             // Set volume
             const vol = parseInt(el.volumeSlider.value) || 50;
             vimeoPlayer.setVolume(vol / 100);
-            vimeoPlayer.setLoop(isLoop).catch(()=>{});
+            vimeoPlayer.setLoop(isLoop).catch(() => { });
 
         } catch (e) {
             console.error("Vimeo Player Init Failed", e);
@@ -1546,7 +1562,7 @@ function skipNext() {
         // it triggers ENDED then quickly PLAYING, but wait, if it triggers ENDED, our onStateChange will call skipNext()!
         // To be safe, if we get skipNext while isLoop is true, AND it's YouTube, we'll let YouTube handle it by NOT forcefully reloading, UNLESS it's totally stopped.
         // Actually, just returning is fine because native looping will handle the restart!
-        return; 
+        return;
     }
 
     if (isShuffle && queue.length > 1) {
@@ -1919,6 +1935,161 @@ document.getElementById('btn-save-share-image').onclick = saveShareCardImage;
 
 const takeScreenshot = openScreenshotModal; // Alias for backward compatibility if needed
 
+// --- Theme System ---
+const THEME_VARS = {
+    '--primary': 'Primary',
+    '--primary-light': 'Pri-Light',
+    '--bg-dark': 'Background',
+    '--bg-panel': 'Panel',
+    '--bg-item': 'Item',
+    '--text-main': 'Text',
+    '--text-muted': 'Muted',
+    '--accent': 'Accent',
+    '--border': 'Border',
+    '--on-primary': 'On Primary'
+};
+
+const THEME_PRESETS = {
+    default: {
+        '--primary': '#8b5cf6', '--primary-light': '#a78bfa', '--bg-dark': '#0f172a',
+        '--bg-panel': '#1e293b', '--bg-item': '#334155', '--text-main': '#f8fafc',
+        '--text-muted': '#94a3b8', '--accent': '#f43f5e', '--border': 'rgba(255,255,255,0.05)',
+        '--on-primary': '#ffffff'
+    },
+    midnight: {
+        '--primary': '#3b82f6', '--primary-light': '#60a5fa', '--bg-dark': '#020617',
+        '--bg-panel': '#0f172a', '--bg-item': '#1e293b', '--text-main': '#f1f5f9',
+        '--text-muted': '#64748b', '--accent': '#ef4444', '--border': 'rgba(255,255,255,0.05)',
+        '--on-primary': '#ffffff'
+    },
+    sakura: {
+        '--primary': '#ec4899', '--primary-light': '#f472b6', '--bg-dark': '#1c1917',
+        '--bg-panel': '#292524', '--bg-item': '#44403c', '--text-main': '#fafaf9',
+        '--text-muted': '#a8a29e', '--accent': '#fb7185', '--border': 'rgba(255,255,255,0.1)',
+        '--on-primary': '#ffffff'
+    },
+    forest: {
+        '--primary': '#10b981', '--primary-light': '#34d399', '--bg-dark': '#064e3b',
+        '--bg-panel': '#065f46', '--bg-item': '#047857', '--text-main': '#ecfdf5',
+        '--text-muted': '#a7f3d0', '--accent': '#f59e0b', '--border': 'rgba(255,255,255,0.1)',
+        '--on-primary': '#ffffff'
+    },
+    ocean: {
+        '--primary': '#06b6d4', '--primary-light': '#22d3ee', '--bg-dark': '#083344',
+        '--bg-panel': '#0e7490', '--bg-item': '#155e75', '--text-main': '#f0f9ff',
+        '--text-muted': '#bae6fd', '--accent': '#f97316', '--border': 'rgba(255,255,255,0.1)',
+        '--on-primary': '#ffffff'
+    },
+    sunset: {
+        '--primary': '#f97316', '--primary-light': '#fb923c', '--bg-dark': '#451a03',
+        '--bg-panel': '#78350f', '--bg-item': '#92400e', '--text-main': '#fff7ed',
+        '--text-muted': '#ffedd5', '--accent': '#dc2626', '--border': 'rgba(255,255,255,0.1)',
+        '--on-primary': '#ffffff'
+    }
+};
+
+function initThemeSystem() {
+    const container = document.getElementById('theme-inputs');
+    if (!container) return;
+
+    // Generate Inputs
+    for (const [v, label] of Object.entries(THEME_VARS)) {
+        const row = document.createElement('div');
+        row.className = 'theme-input-row';
+
+        const labelEl = document.createElement('label');
+        labelEl.textContent = label;
+
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.dataset.var = v;
+
+        const textInput = document.createElement('input');
+        textInput.type = 'text';
+        textInput.dataset.var = v;
+        textInput.maxLength = 20;
+
+        // Initial Value
+        const currentVal = getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+        if (currentVal.startsWith('#')) {
+            colorInput.value = currentVal;
+            textInput.value = currentVal;
+        } else {
+            textInput.value = currentVal;
+            // RGB/RGBA fallback to picker default or ignore
+        }
+
+        // Sync Logic
+        colorInput.oninput = () => {
+            textInput.value = colorInput.value.toUpperCase();
+            document.documentElement.style.setProperty(v, colorInput.value);
+        };
+        textInput.oninput = () => {
+            let val = textInput.value.trim();
+            document.documentElement.style.setProperty(v, val);
+            if (val.startsWith('#') && (val.length === 4 || val.length === 7)) {
+                colorInput.value = val;
+            }
+        };
+
+        row.appendChild(labelEl);
+        row.appendChild(colorInput);
+        row.appendChild(textInput);
+        container.appendChild(row);
+    }
+
+    // Modal Control
+    document.getElementById('btn-theme').onclick = () => {
+        document.getElementById('theme-modal').classList.add('active');
+        // Refresh values in case they changed
+        document.querySelectorAll('#theme-inputs .theme-input-row').forEach(row => {
+            const ci = row.querySelector('input[type="color"]');
+            const ti = row.querySelector('input[type="text"]');
+            const v = ci.dataset.var;
+            const current = getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+            ti.value = current;
+            if (current.startsWith('#')) ci.value = current;
+        });
+    };
+
+    // Presets
+    document.querySelectorAll('.theme-preset-btn').forEach(btn => {
+        btn.onclick = () => {
+            const pName = btn.dataset.preset;
+            const p = THEME_PRESETS[pName];
+            if (!p) return;
+            for (const [v, val] of Object.entries(p)) {
+                document.documentElement.style.setProperty(v, val);
+            }
+            // Trigger refresh
+            document.getElementById('btn-theme').click();
+        };
+    });
+
+    document.getElementById('btn-theme-reset').onclick = () => {
+        const p = THEME_PRESETS.default;
+        for (const [v, val] of Object.entries(p)) {
+            document.documentElement.style.setProperty(v, val);
+        }
+        document.getElementById('btn-theme').click();
+    };
+}
+
+// --- Sleep Timer Button ---
+function initExtraButtons() {
+    const btnSleep = document.getElementById('btn-sleep-timer-open');
+    if (btnSleep) {
+        btnSleep.onclick = () => {
+            document.getElementById('sleep-timer-modal').classList.add('active');
+        };
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initThemeSystem();
+    initExtraButtons();
+});
+
 // Custom Tier Label Logic - Removed
 
 
@@ -2177,16 +2348,16 @@ window.addEventListener('pointercancel', stopLockTimer);
 // pointerup handles mouseup/touchend uniformly
 
 // Controls (Consolidated below)
-el.btnLoop.onclick = () => { 
-    isLoop = !isLoop; 
-    if (isLoop) isQueueLoop = false; 
-    updateUIStates(); 
+el.btnLoop.onclick = () => {
+    isLoop = !isLoop;
+    if (isLoop) isQueueLoop = false;
+    updateUIStates();
 
     // Apply native loop dynamically to current player
     if (localVideo) localVideo.loop = isLoop;
-    if (vimeoPlayer && typeof vimeoPlayer.setLoop === 'function') vimeoPlayer.setLoop(isLoop).catch(()=>{});
+    if (vimeoPlayer && typeof vimeoPlayer.setLoop === 'function') vimeoPlayer.setLoop(isLoop).catch(() => { });
     if (isPlayerReady && player && typeof player.setLoop === 'function') {
-        try { player.setLoop(isLoop); } catch(e){}
+        try { player.setLoop(isLoop); } catch (e) { }
     }
 };
 el.btnQueueLoop.onclick = () => { isQueueLoop = !isQueueLoop; if (isQueueLoop) isLoop = false; updateUIStates(); };
@@ -2285,7 +2456,7 @@ el.progressContainer.onclick = (e) => {
 // Tier形式変換関数
 function convertOldTierToNew(tier) {
     if (tier === null || tier === undefined || tier === '') return 0;
-    
+
     // Check if it's already a number or numeric string
     const num = parseInt(tier);
     if (!isNaN(num) && String(num) === String(tier).trim()) {
@@ -2300,12 +2471,12 @@ function convertOldTierToNew(tier) {
     if (sTier === '-') return 0;
     if (sTier === '×') return -100;
     if (sTier === '△') return 100;
-    
+
     const stars = sTier.match(/＊/g);
     if (stars) {
         return Math.min(1000, stars.length * 100 + 100);
     }
-    
+
     const tierMap = {
         'SSSSS': 600, 'SSSS': 500, 'SSS': 400, 'SS': 300,
         'S+': 250, 'S': 200, 'S-': 150,
@@ -4340,23 +4511,23 @@ function updateSleepTimerStatusUI() {
 function setSleepTimer(minutes) {
     if (!minutes || minutes <= 0) return;
     clearSleepTimer();
-    
+
     sleepTimerConfig.enabled = true;
     sleepTimerConfig.totalSeconds = minutes * 60;
     sleepTimerConfig.remainingSeconds = minutes * 60;
-    
+
     sleepTimerInterval = setInterval(() => {
         if (!sleepTimerConfig.enabled) return;
         sleepTimerConfig.remainingSeconds--;
-        
+
         // Update status UI if modal is open
         updateSleepTimerStatusUI();
-        
+
         if (sleepTimerConfig.remainingSeconds <= 0) {
             // Timer expired - pause playback
             mediaPause();
             clearSleepTimer();
-            
+
             // Visual feedback
             if (el.heldKeysIndicator) {
                 el.heldKeysIndicator.innerText = '😴 Sleep Timer - 再生停止';
@@ -4365,9 +4536,9 @@ function setSleepTimer(minutes) {
             }
         }
     }, 1000);
-    
+
     updateSleepTimerStatusUI();
-    
+
     // Feedback
     if (el.heldKeysIndicator) {
         el.heldKeysIndicator.innerText = `😴 Sleep: ${minutes}分`;
@@ -4555,18 +4726,18 @@ if (document.getElementById('btn-change-thumb') && el.thumbInput) {
                 e.target.value = '';
                 return;
             }
-            
+
             const reader = new FileReader();
             reader.onload = (re) => {
                 queue[targetIdx].thumbnail = re.target.result;
-                
+
                 // If the playing item's thumbnail was updated and we are on a file/local item
                 if (targetIdx === currentIndex && localImage && queue[currentIndex].type === 'file') {
                     localImage.src = queue[currentIndex].thumbnail;
                     localImage.style.display = 'block';
                     localImage.style.zIndex = "5";
                 }
-                
+
                 renderQueue();
                 e.target.value = ''; // Reset
             };

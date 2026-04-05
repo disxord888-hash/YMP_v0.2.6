@@ -1394,6 +1394,18 @@ input:checked+.slider:before {
     text-transform: uppercase;
 }
 
+.share-brand-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.share-brand-url {
+    font-size: 0.55rem;
+    color: rgba(255, 255, 255, 0.35);
+    letter-spacing: 0.5px;
+}
+
 .share-code {
     display: flex;
     gap: 4px;
@@ -1434,11 +1446,67 @@ input:checked+.slider:before {
         transform: scaleY(0.4);
         opacity: 0.7;
     }
-
     100% {
         transform: scaleY(1);
         opacity: 1;
     }
+}
+
+/* Theme Settings */
+.theme-inputs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.theme-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,0.2);
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.theme-input-row label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    min-width: 70px;
+    flex-shrink: 0;
+}
+
+.theme-input-row input[type="color"] {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0;
+    background: transparent;
+    flex-shrink: 0;
+}
+
+.theme-input-row input[type="text"] {
+    width: 80px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    text-align: center;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.theme-preset-btn {
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.8rem !important;
+    min-width: auto !important;
+    height: auto !important;
 }
 
 /* Mobile check */
